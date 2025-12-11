@@ -1,9 +1,20 @@
-Here you will find code and tips for the SEX DIMORPHISM - MR Proteomics project
+# Exploring sex-specific causal links between hundreds of proteins and lipid metabolism using the UK Biobank Pharma proteomics data
 
-This project is funded by a MSCA Individual Fellowship 
+**Date released:** 04/11/2025
 
-Here is the reference publication:
-
+Scripts used for analysis and Supplementary Material for the paper 
 
 Zanetti et al : Exploring sex-specific causal links between hundreds of proteins and lipid metabolism using the UK Biobank Pharma proteomics data. 
 Medrxiv 2025 https://doi.org/10.1101/2025.09.16.25335948
+
+
+The pipeline is divided in 2 main folders containing:
+
+All the codes used to perform the analysis
+All the Supplementary Figures included in the Manuscript
+
+
+*For questions** please contact Daniela Zanetti (daniela.zanetti@cnr.it) or Serena Sanna (serena.sanna@cnr.it) 
+
+**This project is funded by a MSCA Individual Fellowship**
+
