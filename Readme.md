@@ -14,7 +14,7 @@ All the codes used to perform the analysis
 All the Supplementary Figures included in the Manuscript
 
 
-*For questions** please contact Daniela Zanetti (daniela.zanetti@cnr.it) or Serena Sanna (serena.sanna@cnr.it) 
+**For questions** please contact Daniela Zanetti (daniela.zanetti@cnr.it) or Serena Sanna (serena.sanna@cnr.it) 
 
 **This project is funded by a MSCA Individual Fellowship**
 
