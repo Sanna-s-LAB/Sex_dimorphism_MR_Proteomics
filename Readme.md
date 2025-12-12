@@ -1,6 +1,6 @@
 # Exploring sex-specific causal links between hundreds of proteins and lipid metabolism using the UK Biobank Pharma proteomics data
 
-**Date Released:** 04/11/2025
+**Date Released:** 12/12/2025
 
 Scripts used for analysis and Supplementary Material for the paper 
 
