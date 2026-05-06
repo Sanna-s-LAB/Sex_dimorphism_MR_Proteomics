@@ -661,7 +661,7 @@ Sig4 <- Sig4 %>%
 write.xlsx(Sig4 ,"~/Tables_new/ST4_Table_after_bidir_and_cochran.xlsx")
 
 
-##### ST6. LIFELINES #####
+##### ST7. LIFELINES #####
 
 pairs_for_lifelines <-  Sig4 %>%
      dplyr::filter(SexSpecific %in% c("men-only", "women-only") | Q_Cochran_pvalue<=0.05)%>%
@@ -1089,7 +1089,7 @@ final6 <- calc_cochran_Q(
 
 ###### LIFELINES FINAL TABLES ####
 final6 <- column_GLGC_sexspecific(final6)
-write.xlsx(final6,"~/Tables_new/ST6_Final_LIFELINES_results_with_column_GLGC.xlsx")
+write.xlsx(final6,"~/Tables_new/ST7_Final_LIFELINES_results_with_column_GLGC.xlsx")
 
 
 ##### ST5 - add column for opposite estimate #####
@@ -1124,7 +1124,7 @@ write.xlsx(df,"~/Tables_new/ST5.xlsx")
 
 
 
-##### ST7  #####
+##### ST8  #####
 
 
 df <- read_excel("~/Tables_new/SuppTables.xlsx",sheet="ST5")
@@ -1431,7 +1431,7 @@ head(known_drug_combined)
 # 7. OUTPUT
 # ==============================================================================
 
-write.csv((merge_2, "ST7.csv", row.names = FALSE)
+write.csv((merge_2, "ST8.csv", row.names = FALSE)
 
 
 
