@@ -503,3 +503,270 @@ if (!is.null(mr_presso$`MR-PRESSO results`$`Distortion Test`$`Outliers Indices`)
 }
 
 write.csv(final, file = output_file, quote=F, row.names = F)
+
+
+
+
+# =====================================================
+# MVMR
+# =====================================================
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(MR2)
+
+sig_all <- read_excel("~/ST5.xlsx")
+
+sig_proteins <-  sig_all  %>%
+  dplyr::filter(SexSpecific %in% c("men-only")) %>% #repeat for  "women-only"
+  dplyr::filter(outcome %in% c("HDL") )%>% #repeat for  "LDL", "nonHDL", "TC", "TG"
+  dplyr::select("exposure", "Assay") %>%
+  distinct()
+
+setwd('~/MVMR_MR/')
+
+# --------------------------
+# 1️⃣ Define directories
+# --------------------------
+pqtl_dir <- "~/filtered/"
+gwas_dir <- "~/outcome/"
+
+# --------------------------
+# 2️⃣ Define OIDs to test
+# --------------------------
+
+oids_to_test <- sig_proteins$exposure
+
+# --------------------------
+# 3️⃣ Load pruned cis-pQTLs
+# --------------------------
+pqtl_list <- list()
+
+for(oid in oids_to_test){
+  file_path <- paste0(pqtl_dir, "combined_", oid, "_UKBB_proteomics_male_only.tsv.gz")
+  
+  if(file.exists(file_path)){
+    df <- read.table(file_path, header = TRUE, stringsAsFactors = FALSE)
+    
+    # SNP ID
+    df$SNP <- df$rsid
+    
+    # Alleles
+    df$A1 <- as.character(df$effect_allele)
+    df$A2 <- as.character(df$other_allele)
+    
+    # Beta numeric
+    df$beta <- as.numeric(df$beta)
+    
+    # Keep only necessary columns
+    df <- df %>% select(SNP, beta, A1, A2, standard_error, p_value)
+    
+    df$protein <- oid
+    pqtl_list[[oid]] <- df
+  } else {
+    warning(paste("File not found:", file_path))
+  }
+}
+
+pqtl_all <- bind_rows(pqtl_list)
+
+pqtl_all$SNP
+unique_snps <- unique(pqtl_all$SNP)
+
+gwas_all_proteins<- read.table("~/final_complete_gwas_merged_male.tsv",header=T,as.is=T, sep="\t") #repeat with final_complete_gwas_merged_female.tsv
+
+names(gwas_all_proteins)
+filtered_data <- gwas_all_proteins[gwas_all_proteins$OID %in% oids_to_test, ]
+filtered_data_2 <- filtered_data[filtered_data$rsid %in% pqtl_all$SNP, ]
+
+names(filtered_data_2)
+
+filtered_data_formatted <- filtered_data_2%>%
+  rename(
+    SNP = rsid,
+    beta = beta,
+    se = standard_error,
+    effect_allele = effect_allele,
+    other_allele = other_allele,
+    eaf = effect_allele_frequency,
+    pval = p_value,
+    exposure = OID
+  ) %>%
+  select(SNP, beta, se, effect_allele, other_allele, eaf, pval, exposure)
+
+names(filtered_data_formatted)
+comb_exp_wide <- filtered_data_formatted %>%
+  select(SNP, exposure, pval) %>%
+  pivot_wider(names_from =exposure, values_from = pval,
+              values_fn = min) %>%
+  mutate(
+    pval.exposure = do.call(pmin, c(across(-SNP), na.rm = TRUE))
+  )
+
+
+# Clump (LD pruning)
+
+pqtl_pruned <- clump_data(
+  comb_exp_wide,
+  clump_kb = 10000,
+  clump_r2 = 0.001,  
+  clump_p1 = 1,
+  clump_p2 = 1,
+  bfile = "~/EUR_phase3",
+  plink_bin = "~/plink"  
+)
+
+filtered_data_formatted_independent <- filtered_data_formatted  %>% filter(SNP %in% pqtl_pruned$SNP) 
+
+# Check the result
+head(filtered_data_formatted_independent)
+
+exposure_dat <- filtered_data_formatted_independent  %>%
+  dplyr::rename(
+    beta.exposure = beta,
+    se.exposure = se,
+    effect_allele.exposure = effect_allele,
+    other_allele.exposure = other_allele,
+    eaf.exposure = eaf,
+    pval.exposure = pval,
+    id.exposure = exposure
+  ) %>%
+  dplyr::mutate(
+    exposure = id.exposure
+  )
+
+names(combined)
+outcome_dat <- combined
+
+outcome_dat <- outcome_dat %>%
+  dplyr::rename(
+    SNP = rsid,
+    beta.outcome = EFFECT_SIZE,
+    se.outcome = SE,
+    effect_allele.outcome = ALT,
+    other_allele.outcome = REF,
+    eaf.outcome = POOLED_ALT_AF,
+    pval.outcome = pvalue,
+    id.outcome = Phenotype
+  ) %>%
+  dplyr::mutate(
+    outcome = id.outcome
+  )
+
+outcome_dat <- outcome_dat[!duplicated(outcome_dat[c("SNP", "id.outcome")]), ]
+
+common_snps <- intersect(exposure_dat$SNP, outcome_dat$SNP)
+
+exposure_dat <- exposure_dat[exposure_dat$SNP %in% common_snps, ]
+outcome_dat  <- outcome_dat[outcome_dat$SNP %in% common_snps, ]
+
+mv_data <- TwoSampleMR::mv_harmonise_data(
+  exposure_dat,
+  outcome_dat
+)
+mvmr_res <- mv_multiple(mv_data, plots = T)
+
+arranged_res <- mvmr_res$result %>%
+  arrange(pval)
+
+head (arranged_res)
+
+str(mv_data)
+mvmr_dat <- cbind(
+  SNP = mv_data$SNP,
+  mv_data$exposure_beta,
+  mv_data$exposure_se,
+  mv_data$outcome_beta,
+  mv_data$outcome_se
+)
+
+mvmr_dat <- as.data.frame(mvmr_dat)
+
+rownames(mvmr_dat)
+names(mvmr_dat)
+head(mvmr_dat)
+
+F.data <- format_mvmr(BXGs = mvmr_dat[,c(1:21)],  #change for the other outcomes 
+                      BYG = mvmr_dat[,43],
+                      seBXGs = mvmr_dat[,c(22:42)],
+                      seBYG = mvmr_dat[,44],
+                      RSID = rownames(mvmr_dat))
+
+head(F.data)
+
+res_mvmr <- ivw_mvmr(r_input = F.data)
+names(mvmr_dat)
+rownames(res_mvmr) <- colnames(mvmr_dat[, 1:21])
+tab <- as.data.frame(res_mvmr)
+tab
+
+# Test for weak instruments (conditional F-statistics)
+F_res <- strength_mvmr(F.data)
+
+F_vec <- as.numeric(F_res[1, ])
+length(F_vec)
+colnames(mvmr_dat[, 1:21])
+
+tab_final <- data.frame(
+  Exposure    = colnames(mvmr_dat[, 1:21]),
+  Estimate    = as.numeric(res_mvmr[, "Estimate"]),
+  StdError    = as.numeric(res_mvmr[, "Std. Error"]),
+  t_value     = as.numeric(res_mvmr[, "t value"]),
+  p_value     = as.numeric(res_mvmr[, "Pr(>|t|)"]),
+  F_statistic = F_vec
+)
+
+tab_final 
+
+# Test for horizontal pleiotropy (Q-statistic)
+Q_res <- pleiotropy_mvmr(F.data)
+
+Q_stat <- Q_res$Qstat
+Q_pval <- Q_res$Qpval
+
+# add Q columns (all rows first)
+tab_final$Q_statistic <- NA
+tab_final$Q_pvalue    <- NA
+
+# fill ONLY first row
+tab_final$Q_statistic[1] <- Q_res$Qstat
+tab_final$Q_pvalue[1]    <- Q_res$Qpval
+
+tab_final
+
+tab_final$Outcome <- c("HDL") #change for the other outcomes
+
+tab_final_TC <- tab_final
+tab_final_TC
+
+tab_final_TG <- tab_final
+tab_final_TG
+
+tab_final_LDL <- tab_final
+tab_final_LDL
+
+tab_final_HDL <- tab_final
+tab_final_HDL
+
+tab_final_nonHDL <- tab_final
+tab_final_nonHDL
+
+library(dplyr)
+
+final_merged <- bind_rows(tab_final_HDL, tab_final_nonHDL, tab_final_LDL, tab_final_TC, tab_final_TG)
+
+df <- read_excel("~/Supplementary_Tables.xlsx", sheet = 5)
+
+names(final_merged)
+names(df)
+sig_proteins <-  df  %>%
+  dplyr::select("exposure", "Assay") %>%
+  distinct()
+
+sig_assay <- merge (final_merged, sig_proteins, by.x ="Exposure", by.y = "exposure")
+
+write.csv(sig_assay, "~/ST_6.csv", row.names = FALSE)
+
+
+
