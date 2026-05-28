@@ -4,7 +4,7 @@
 
 Scripts used for analysis and Supplementary Material for the paper 
 
-Zanetti et al : Exploring sex-specific causal links between hundreds of proteins and lipid metabolism using the UK Biobank Pharma Proteomics Project data. 
+Zanetti et al : Exploring sex-specific causal links between hundreds of proteins and lipid metabolism using the UK Biobank Pharma proteomics data. 
 Medrxiv 2025 https://doi.org/10.1101/2025.09.16.25335948
 
 
